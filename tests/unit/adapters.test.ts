@@ -257,5 +257,29 @@ describe('Framework Adapters', () => {
       expect(event).not.toBeNull();
       expect(event?.type).toBe('QUEUE');
     });
+
+    it('classifies an injected cache service set call as CACHE_WRITE', () => {
+      const sf = project.createSourceFile(
+        'cache-service.ts',
+        'async function test() { await this.cacheService.set("key", "value"); }',
+        { overwrite: true },
+      );
+      const call = sf.getFirstDescendantByKindOrThrow(SyntaxKind.CallExpression);
+      const event = adapter.classifyCall(call, dummyContext);
+
+      expect(event).not.toBeNull();
+      expect(event?.type).toBe('CACHE_WRITE');
+    });
+
+    it('does not classify an unrelated set call as cache behavior', () => {
+      const sf = project.createSourceFile(
+        'settings.ts',
+        'async function test() { await this.settingsService.set("key", "value"); }',
+        { overwrite: true },
+      );
+      const call = sf.getFirstDescendantByKindOrThrow(SyntaxKind.CallExpression);
+
+      expect(adapter.classifyCall(call, dummyContext)).toBeNull();
+    });
   });
 });

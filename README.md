@@ -2,6 +2,10 @@
 
 > **Zero-config behavioral drift detector for AI-assisted TypeScript codebases.**
 
+> **Beta software:** BehavDiff is ready for evaluation on real repositories, but its
+> static heuristics can still miss unsupported call shapes or surface noisy findings.
+> Review findings and coverage evidence before using it as a required CI gate.
+
 [![npm version](https://img.shields.io/npm/v/behavdiff.svg)](https://www.npmjs.com/package/behavdiff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -115,15 +119,18 @@ BehavDiff **does not** claim unusual code is automatically a bug. It surfaces em
 
 ### 1. Installation
 
-Install as a development dependency:
+Install this beta as a development dependency:
 
 ```bash
-npm install -D behavdiff
+npm install -D behavdiff@beta
 # or
-pnpm add -D behavdiff
+pnpm add -D behavdiff@beta
 # or
-yarn add -D behavdiff
+yarn add -D behavdiff@beta
 ```
+
+BehavDiff supports Node.js 20, 22, and 24. A future stable release can be installed
+without the `@beta` tag.
 
 ### 2. Run Locally
 
@@ -131,6 +138,28 @@ Analyze your current Git changes against comparable established flows:
 
 ```bash
 npx behavdiff check
+```
+
+To analyze a TypeScript project outside the current directory, provide its path:
+
+```bash
+npx behavdiff check ./path/to/project
+```
+
+For regular project use, add a script to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "behavdiff": "behavdiff check"
+  }
+}
+```
+
+Then run:
+
+```bash
+npm run behavdiff
 ```
 
 Changed-code mode requires Git and an existing commit. By default, BehavDiff compares
@@ -217,11 +246,11 @@ jobs:
   behavdiff:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # Full history for git diff comparison
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -229,6 +258,43 @@ jobs:
       - run: npm ci
       - run: npx behavdiff check --base origin/main
 ```
+
+---
+
+## Troubleshooting
+
+### Exit code 1 after a check
+
+Exit code `1` means BehavDiff found behavioral drift that meets the configured
+confidence threshold. It is the expected CI signal for findings, not a tool crash.
+Exit code `2` indicates a configuration, runtime, or tool error.
+
+### A behavior appears to be missing
+
+Run diagnostics to list calls on injected services that BehavDiff could not classify:
+
+```bash
+npx behavdiff check --diagnostics
+```
+
+Diagnostics only adds explanatory output; it does not change detection thresholds or
+create findings. Add important project-specific calls to `behavdiff.config.json`.
+
+### No Git repository or commit is available
+
+Changed-code mode uses Git. If Git or repository history is unavailable, BehavDiff
+falls back to analyzing all functions. You can request this explicitly with:
+
+```bash
+npx behavdiff check --all
+```
+
+### No finding is reported
+
+Check the behavior-coverage summary. BehavDiff needs enough recognized behavior,
+at least three comparable peers by default, and sufficient consensus to learn a
+baseline. A result can therefore be inconclusive rather than proof that no drift
+exists. Use `--diagnostics` to investigate unclassified injected-service calls.
 
 ---
 

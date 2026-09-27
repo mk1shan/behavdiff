@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a crash, incorrect finding, missed behavior, or packaging problem
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Remove secrets and proprietary code before sharing examples.
+  - type: input
+    id: version
+    attributes:
+      label: BehavDiff version
+      placeholder: 0.3.0-beta.1
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js and npm versions
+      placeholder: Node.js 22.x, npm 10.x
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Problem type
+      options:
+        - Missed behavior or false negative
+        - Incorrect finding or false positive
+        - Crash or runtime error
+        - Installation or packaging problem
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the command, small sanitized TypeScript example, actual output, and expected output.
+    validations:
+      required: true
+  - type: textarea
+    id: coverage
+    attributes:
+      label: Coverage and diagnostics output
+      description: Paste the Behavior coverage section and relevant --diagnostics output.

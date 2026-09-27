@@ -42,7 +42,11 @@ export class GenericTypeScriptAdapter implements FrameworkAdapter {
     }
 
     // 3. Cache detection
-    if (exprText.match(/(?:this\.)?(?:cache|redis|memcached)\.(?:get|hget|mget)/i)) {
+    if (
+      exprText.match(
+        /(?:this\.)?(?:[a-zA-Z0-9_]*(?:cache|redis|memcached)(?:service|client|manager|store)?)\.(?:get|hget|mget)$/i,
+      )
+    ) {
       return {
         id: `cache-read-${call.getStart()}`,
         type: 'CACHE_READ',
@@ -55,7 +59,11 @@ export class GenericTypeScriptAdapter implements FrameworkAdapter {
         rawCallee: exprText,
       };
     }
-    if (exprText.match(/(?:this\.)?(?:cache|redis|memcached)\.(?:set|setex|del|hset)/i)) {
+    if (
+      exprText.match(
+        /(?:this\.)?(?:[a-zA-Z0-9_]*(?:cache|redis|memcached)(?:service|client|manager|store)?)\.(?:set|setex|del|hset)$/i,
+      )
+    ) {
       return {
         id: `cache-write-${call.getStart()}`,
         type: 'CACHE_WRITE',

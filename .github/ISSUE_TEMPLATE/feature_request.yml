@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose an adapter, behavior category, or analysis improvement
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Explain the real repository pattern BehavDiff cannot currently handle.
+    validations:
+      required: true
+  - type: textarea
+    id: calls
+    attributes:
+      label: Concrete call shapes
+      description: Provide sanitized imports, types, decorators, and method calls that can identify the behavior safely.
+    validations:
+      required: true
+  - type: textarea
+    id: false_positives
+    attributes:
+      label: False-positive risks
+      description: List unrelated APIs that use similar method names and how they can be distinguished.
