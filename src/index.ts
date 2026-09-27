@@ -18,6 +18,7 @@ import type { ReporterSummary } from './reporter/terminal.js';
 export * from './types/index.js';
 export * from './adapters/types.js';
 export * from './adapters/registry.js';
+export * from './adapters/typeorm.js';
 export * from './parser/project.js';
 export * from './parser/functions.js';
 export * from './behaviors/extractor.js';

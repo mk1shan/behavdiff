@@ -225,7 +225,7 @@ AST PARSER (ts-morph)
      ↓
 FUNCTION EXTRACTION (Controllers, Services, Handlers)
      ↓
-BEHAVIOR EXTRACTOR (Prisma, Validation, Email, HTTP, Payment)
+BEHAVIOR EXTRACTOR (Prisma, TypeORM, Validation, Email, HTTP, Payment)
      ↓
 BEHAVIOR FINGERPRINTS (Preserved execution ordering)
      ↓
@@ -266,6 +266,7 @@ False positives erode developer trust. BehavDiff enforces strict prevention rule
 
 - **TypeScript / Node.js**: Functions, classes, async/await, try/catch, statements.
 - **Prisma ORM**: `DB_READ` (`findUnique`, `findMany`), `DB_WRITE` (`create`, `update`, `delete`), transactions.
+- **TypeORM**: Typed `Repository`/`@InjectRepository` reads and writes, plus QueryBuilder terminal operations.
 - **NestJS**: `@UseGuards` (`AUTH`), `@UsePipes` (`VALIDATION`), `@Get`, `@Post`, `@Put`, `@Delete`.
 - **Validation**: Zod (`.parse`, `.safeParse`), Class-Validator (`validate`, `validateOrReject`), Joi/Yup, and `validate*` methods.
 - **Email**: Nodemailer, MailerService, Resend, SendGrid, SES (`EMAIL`).

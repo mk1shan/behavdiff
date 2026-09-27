@@ -2,6 +2,7 @@ import type { CallExpression, Decorator } from 'ts-morph';
 import type { BehaviorEvent } from '../types/index.js';
 import { FrameworkAdapter, ASTContext } from './types.js';
 import { PrismaAdapter } from './prisma.js';
+import { TypeOrmAdapter } from './typeorm.js';
 import { NestJsAdapter } from './nestjs.js';
 import { ValidationAdapter } from './validation.js';
 import { EmailAdapter } from './email.js';
@@ -14,6 +15,7 @@ export class AdapterRegistry {
 
   constructor() {
     this.register(new PrismaAdapter());
+    this.register(new TypeOrmAdapter());
     this.register(new NestJsAdapter());
     this.register(new ValidationAdapter());
     this.register(new EmailAdapter());
