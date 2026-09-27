@@ -111,9 +111,7 @@ export async function runBehavDiff(
   let comparableFlowsCount = 0;
 
   for (const target of targetFunctions) {
-    if (options.diagnostics) {
-      unclassifiedCalls.push(...(target.unknownCalls ?? []));
-    }
+    unclassifiedCalls.push(...(target.unknownCalls ?? []));
     // Search baseline in all other functions in repository
     const candidatePool = allFingerprints.filter((f) => f.id !== target.id);
     const similarPeers = findSimilarFlows(target, candidatePool, {
@@ -139,14 +137,27 @@ export async function runBehavDiff(
     }
   }
 
+  const deduplicatedUnclassifiedCalls = deduplicateUnknownCalls(unclassifiedCalls);
   return {
     functionsAnalyzed: allFingerprints.length,
     comparableFlowsDiscovered: comparableFlowsCount,
     changedFunctionsAnalyzed: targetFunctions.length,
     findings,
+    coverage: {
+      recognizedBehaviorEvents: targetFunctions.reduce(
+        (count, target) => count + target.behaviors.length,
+        0,
+      ),
+      unclassifiedInjectedCalls: deduplicatedUnclassifiedCalls.length,
+      functionsWithRecognizedBehavior: targetFunctions.filter(
+        (target) => target.behaviors.length > 0,
+      ).length,
+      comparableTargetFunctions: comparableFlowsCount,
+      targetFunctions: targetFunctions.length,
+    },
     ...(options.diagnostics
       ? {
-          unclassifiedCalls: deduplicateUnknownCalls(unclassifiedCalls),
+          unclassifiedCalls: deduplicatedUnclassifiedCalls,
         }
       : {}),
   };

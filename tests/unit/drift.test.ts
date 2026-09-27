@@ -149,4 +149,39 @@ describe('Drift Comparator & Finding Generation', () => {
       ]),
     );
   });
+
+  it('reports a database write introduced into a read flow at default confidence', () => {
+    const readBaseline: BaselinePattern = {
+      ...baseline,
+      intentCluster: 'READ',
+      dominantSequence: ['DB_READ'],
+      peerCount: 7,
+      totalCandidates: 10,
+      consensusRatio: 1,
+    };
+    const target: FunctionFingerprint = {
+      id: 'find-tags',
+      name: 'findAll',
+      filePath: '/src/tag.service.ts',
+      relativeFilePath: 'src/tag.service.ts',
+      role: 'nestjs-service-method',
+      parameters: [],
+      decorators: [],
+      injectedDependencies: ['tagRepository'],
+      targetEntities: ['tag'],
+      behaviors: [],
+      sequence: ['DB_WRITE', 'DB_READ'],
+      location: dummyLoc,
+    };
+
+    const finding = compareBehaviorToBaseline(target, readBaseline);
+
+    expect(finding?.confidence).toBe('MEDIUM');
+    expect(finding?.differences).toContainEqual(
+      expect.objectContaining({
+        type: 'ADDED_BEHAVIOR',
+        affectedBehavior: 'DB_WRITE',
+      }),
+    );
+  });
 });

@@ -6,6 +6,13 @@ export interface ReporterSummary {
   comparableFlowsDiscovered: number;
   changedFunctionsAnalyzed: number;
   findings: DriftFinding[];
+  coverage: {
+    recognizedBehaviorEvents: number;
+    unclassifiedInjectedCalls: number;
+    functionsWithRecognizedBehavior: number;
+    comparableTargetFunctions: number;
+    targetFunctions: number;
+  };
   unclassifiedCalls?: UnknownCall[];
 }
 
@@ -25,6 +32,21 @@ export function formatTerminalReport(summary: ReporterSummary): string {
   );
   lines.push('');
 
+  lines.push(pc.dim('Behavior coverage:'));
+  lines.push(
+    `  ${summary.coverage.recognizedBehaviorEvents} recognized behavior events across ${summary.coverage.functionsWithRecognizedBehavior}/${summary.coverage.targetFunctions} target functions`,
+  );
+  lines.push(
+    `  ${summary.coverage.unclassifiedInjectedCalls} unclassified injected-service calls`,
+  );
+  lines.push(
+    `  ${summary.coverage.comparableTargetFunctions}/${summary.coverage.targetFunctions} target functions have comparable peers`,
+  );
+  if (summary.coverage.unclassifiedInjectedCalls > 0 && !summary.unclassifiedCalls) {
+    lines.push(pc.yellow('  Run with --diagnostics to list unclassified calls.'));
+  }
+  lines.push('');
+
   if (summary.unclassifiedCalls) {
     lines.push(pc.dim('Unclassified injected-service calls (diagnostic only):'));
     if (summary.unclassifiedCalls.length === 0) {
@@ -38,6 +60,14 @@ export function formatTerminalReport(summary: ReporterSummary): string {
   }
 
   if (summary.findings.length === 0) {
+    if (
+      summary.coverage.targetFunctions > 0 &&
+      summary.coverage.comparableTargetFunctions === 0
+    ) {
+      lines.push(pc.yellow('Coverage is limited: no target function had comparable peers.'));
+      lines.push(pc.yellow('The clean result is inconclusive for behavioral drift.'));
+      lines.push('');
+    }
     lines.push(pc.green('✔ No behavioral anomalies detected across changed code.'));
     lines.push('');
     return lines.join('\n');

@@ -93,4 +93,19 @@ describe('Baseline Pattern Discovery', () => {
     const baseline = discoverBaselinePattern(target, peers);
     expect(baseline).toBeNull();
   });
+
+  it('treats adjacent repeated operations as one behavior phase', () => {
+    const readTarget = { ...target, name: 'findTags', sequence: ['DB_WRITE', 'DB_READ'] as any[] };
+    const peers = [
+      createPeer('findUsers', ['DB_READ']),
+      createPeer('findProfiles', ['DB_READ', 'DB_READ']),
+      createPeer('findArticles', ['DB_READ', 'DB_READ', 'DB_READ']),
+    ];
+
+    const baseline = discoverBaselinePattern(readTarget, peers);
+
+    expect(baseline?.dominantSequence).toEqual(['DB_READ']);
+    expect(baseline?.consensusRatio).toBe(1);
+    expect(baseline?.peers[1].sequence).toEqual(['DB_READ', 'DB_READ']);
+  });
 });

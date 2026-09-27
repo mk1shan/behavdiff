@@ -20,7 +20,7 @@ Existing developer tools catch compiler errors, lint violations, formatting issu
 - **100% Local Execution**: Runs entirely on your workstation or CI server.
 - **No LLM or Cloud Required**: No OpenAI, Anthropic, Gemini, or remote servers.
 - **No Database or Accounts**: Zero setup, zero accounts, zero telemetry.
-- **Deterministic**: Powered by AST static analysis and empirical consensus.
+- **Deterministic for the same inputs**: The same source, configuration, BehavDiff version, and dependency metadata produce the same AST-based result.
 
 ---
 
@@ -73,6 +73,11 @@ BehavDiff — Behavioral Drift Detector
   ✓ 142 functions indexed
   ✓ 19 comparable flows discovered
   ✓ 1 changed function analyzed
+
+Behavior coverage:
+  2 recognized behavior events across 1/1 target functions
+  0 unclassified injected-service calls
+  1/1 target functions have comparable peers
 
 ⚠ 1 BEHAVIORAL DRIFT FINDING DETECTED
 
@@ -128,6 +133,11 @@ Analyze your current Git changes against comparable established flows:
 npx behavdiff check
 ```
 
+Changed-code mode requires Git and an existing commit. By default, BehavDiff compares
+the working tree with `HEAD` and also includes untracked TypeScript files. If the target
+is not a Git repository or Git is unavailable, BehavDiff falls back to analyzing all
+functions. Use `--all` when you intentionally want a full-repository scan.
+
 ---
 
 ## 🛠 Command Line Interface (CLI)
@@ -141,7 +151,7 @@ npx behavdiff check [options]
 | Flag | Description | Default |
 | :--- | :--- | :--- |
 | `--staged` | Analyze only staged Git changes (`git diff --staged`) | `false` |
-| `--base <branch>` | Compare changes against a base Git ref or branch (e.g. `main`) | Current branch `HEAD` |
+| `--base <branch>` | Analyze committed changes from the merge base with a Git ref through `HEAD` (e.g. `origin/main`) | Not set; working tree is compared with `HEAD` |
 | `--all` | Analyze all functions in repository instead of only Git changes | `false` |
 | `--min-confidence <level>` | Minimum confidence level to report (`high`, `medium`, `low`) | `medium` |
 | `--min-score <number>` | Minimum similarity score required for a comparable flow | `65` |
@@ -156,7 +166,7 @@ npx behavdiff check [options]
 
 BehavDiff conforms to standard CI/CD exit codes:
 - **`0`**: No significant behavioral drift detected.
-- **`1`**: High-confidence or medium-confidence behavioral drift detected.
+- **`1`**: One or more findings met the selected `--min-confidence` threshold.
 - **`2`**: Tool, configuration, or runtime error.
 
 ### Custom behavior mappings and diagnostics
@@ -172,7 +182,7 @@ BehavDiff automatically reads `behavdiff.config.json` from the project root when
 }
 ```
 
-Patterns match call names exactly; `*` can match any text. A leading `this.` is optional, so `cacheService.set` also matches `this.cacheService.set`. Supported labels are the behavior names listed in the JSON schema and API, such as `DB_WRITE`, `CACHE_READ`, `CACHE_WRITE`, `EMAIL`, and `QUEUE`.
+Patterns match call names exactly; `*` can match any text. A leading `this.` is optional, so `cacheService.set` also matches `this.cacheService.set`. Supported labels are validated by BehavDiff and exported by its TypeScript API, including `DB_WRITE`, `CACHE_READ`, `CACHE_WRITE`, `EMAIL`, and `QUEUE`.
 
 To see unclassified calls on injected services in changed functions, run:
 
@@ -180,7 +190,13 @@ To see unclassified calls on injected services in changed functions, run:
 npx behavdiff check --diagnostics
 ```
 
-The diagnostic list is informational and does not create drift findings. Configure calls that represent important behavior to include them in the sequence analysis. Calls that BehavDiff cannot resolve as injected-service calls may still be missed; this report does not claim to list every unresolved call in the program.
+The diagnostic list is informational and does not create drift findings. Configure calls that represent important behavior to include them in the sequence analysis. Diagnostics only count calls that BehavDiff can identify as calls on constructor-injected dependencies. Dynamic dispatch, factory-created clients, local variables, unresolved symbols, and other call shapes can remain invisible to both behavior extraction and diagnostics.
+
+Normal terminal output includes a compact behavior-coverage summary: recognized events,
+unclassified injected-service calls, and how many target functions have comparable peers.
+When no target function has comparable peers, BehavDiff marks a clean result as
+inconclusive instead of presenting it as strong evidence that no drift exists. Use
+`--diagnostics` to print the locations of unclassified calls.
 
 ---
 
@@ -258,7 +274,7 @@ False positives erode developer trust. BehavDiff enforces strict prevention rule
 - **Intent Gating**: Read queries (`GET`, `find*`, `get*`) are never compared with mutations (`POST`, `create*`, `delete*`).
 - **Framework Role Separation**: Service methods, controller handlers, and standalone functions are kept in separate peer groups.
 - **Peer Evidence**: Findings show the selected peers, their similarity scores, and the reasons they matched.
-- **Exclusion Filters**: Tests (`*.spec.ts`, `*.test.ts`, `__tests__`), mocks, and build output (`dist/`) are excluded from baseline patterns.
+- **Exclusion Filters**: Tests (`*.spec.ts`, `*.test.ts`, `__tests__`) and common generated folders (`dist/`, `build/`, `coverage/`) are excluded by default. Other mocks or generated paths require the API's ignore-pattern option.
 
 ---
 
@@ -266,16 +282,18 @@ False positives erode developer trust. BehavDiff enforces strict prevention rule
 
 - **TypeScript / Node.js**: Functions, classes, async/await, try/catch, statements.
 - **Prisma ORM**: `DB_READ` (`findUnique`, `findMany`), `DB_WRITE` (`create`, `update`, `delete`), transactions.
-- **TypeORM**: Typed `Repository`/`@InjectRepository` reads and writes, plus QueryBuilder terminal operations.
+- **TypeORM**: Common reads and writes on typed `Repository`, `TreeRepository`, and `MongoRepository` instances or `@InjectRepository` parameters; common QueryBuilder terminal reads and `execute()` writes.
 - **NestJS**: `@UseGuards` (`AUTH`), `@UsePipes` (`VALIDATION`), `@Get`, `@Post`, `@Put`, `@Delete`.
 - **Validation**: Zod (`.parse`, `.safeParse`), Class-Validator (`validate`, `validateOrReject`), Joi/Yup, and `validate*` methods.
-- **Email**: Nodemailer, MailerService, Resend, SendGrid, SES (`EMAIL`).
+- **Email**: Direct `sendEmail`/`sendMail` calls and common mail/email service, Nodemailer transporter, Resend, and `sgMail` call shapes (`EMAIL`).
 - **HTTP**: `fetch`, Axios, NestJS `HttpService` (`HTTP_CALL`).
 - **Payments & Queues**: Stripe, PayPal, Bull, Kafka, RabbitMQ, SQS.
 
 ### Current analysis boundaries
 
-BehavDiff is a static heuristic analyzer. It resolves direct behavior calls and one level of symbol-resolvable helper calls. Dynamic dispatch, runtime-generated methods, deeply recursive call graphs, and calls whose implementation is unavailable may not be classified. Findings are review signals rather than proof of a defect; tune the similarity, peer, consensus, and confidence thresholds for repositories with intentionally diverse workflows.
+BehavDiff is a static heuristic analyzer, not a proof system. It recognizes supported direct call shapes and follows symbol-resolvable local helper calls while preventing recursive cycles. Dynamic dispatch, runtime-generated methods, callbacks whose execution order differs at runtime, external implementations, unresolved symbols, and unsupported libraries may not be classified. Diagnostics are intentionally incomplete for call shapes that cannot be tied to injected dependencies.
+
+Baseline learning also requires evidence: at least three eligible peers, at least 75% normalized-sequence consensus, and medium confidence by default. BehavDiff can therefore suppress a real difference when a repository has too few comparable functions or intentionally diverse workflows. The coverage summary shows recognized events, unclassified injected-service calls, and comparable target functions so a clean result is not presented without context. Findings are review signals rather than proof of a defect; thresholds can be tuned for a repository, but lowering them can increase noise.
 
 ---
 

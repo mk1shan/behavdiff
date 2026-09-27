@@ -29,14 +29,17 @@ export function discoverBaselinePattern(
   const sequenceCounts = new Map<string, { sequence: BehaviorType[]; count: number; matchingPeers: FunctionFingerprint[] }>();
 
   for (const peer of peers) {
-    const key = peer.sequence.join(' → ');
-    const existing = sequenceCounts.get(key);
+    // Learn phase order without treating adjacent calls of the same kind as
+    // different conventions. Full peer fingerprints remain unchanged for evidence.
+    const normalizedSequence = collapseAdjacentBehaviors(peer.sequence);
+    const normalizedKey = JSON.stringify(normalizedSequence);
+    const existing = sequenceCounts.get(normalizedKey);
     if (existing) {
       existing.count++;
       existing.matchingPeers.push(peer);
     } else {
-      sequenceCounts.set(key, {
-        sequence: peer.sequence,
+      sequenceCounts.set(normalizedKey, {
+        sequence: normalizedSequence,
         count: 1,
         matchingPeers: [peer],
       });
@@ -74,4 +77,8 @@ export function discoverBaselinePattern(
     totalCandidates: peers.length,
     consensusRatio,
   };
+}
+
+export function collapseAdjacentBehaviors(sequence: BehaviorType[]): BehaviorType[] {
+  return sequence.filter((behavior, index) => index === 0 || behavior !== sequence[index - 1]);
 }
